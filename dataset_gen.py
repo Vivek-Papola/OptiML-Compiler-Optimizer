@@ -5,13 +5,20 @@ import tempfile
 
 class DatasetGenerator:
     def __init__(self, csv_file='code_dataset.csv'):
-        self.opt_levels = ['-O0', '-O1', '-O2', '-O3', '-Os']
-        self.features = ["add", "mul", "load", "store", "call", "define", "br i1"]
+        # Map codes to flags
+        self.opt_level_map = {'0': '-O0', '1': '-O1', '2': '-O2', '3': '-O3', 's': '-Os'}
+        self.features = ["add", "mul", "load", "store", "call", "define", "br i1", "loops"]
         self.csv_file = csv_file
 
     def count_instruction(self, filename, keyword):
         try:
-            result = subprocess.check_output(f"grep -o '{keyword}' {filename} | wc -l", shell=True)
+            if keyword == "loops":
+                result = subprocess.check_output(
+                    r"grep -E '\b(for|while|do)\b' {} | wc -l".format(filename),
+                    shell=True
+                )
+            else:
+                result = subprocess.check_output(f"grep -o '{keyword}' {filename} | wc -l", shell=True)
             return int(result.strip())
         except:
             return 0
@@ -38,7 +45,7 @@ class DatasetGenerator:
             exec_time = float(result.strip().splitlines()[-1])
             return exec_time
         except subprocess.CalledProcessError:
-            print(f"[!] Failed at {opt_flag}")
+            print(f"[!] Failed at {opt_flag} {c_file}")
             return float('inf')
         finally:
             if os.path.exists(out_exec):
@@ -47,11 +54,12 @@ class DatasetGenerator:
     def extract_features(self, c_file):
         ir_file = tempfile.mktemp(suffix=".ll")
         subprocess.run(f"clang -O0 -S -emit-llvm {c_file} -o {ir_file}", shell=True, check=True)
-        
+
         feats = {}
         for instr in self.features:
-            feats[instr] = self.count_instruction(ir_file, instr)
-        
+            file_to_check = c_file if instr == "loops" else ir_file
+            feats[instr] = self.count_instruction(file_to_check, instr)
+
         feats['basic_blocks'] = self.get_basic_block_count(ir_file)
         feats['total_instructions'] = self.get_instruction_count(ir_file)
 
@@ -60,24 +68,30 @@ class DatasetGenerator:
 
     def get_best_optimization_flag(self, c_file):
         timings = {}
-        for flag in self.opt_levels:
+        for code, flag in self.opt_level_map.items():
             time_taken = self.compile_and_measure(c_file, flag)
-            timings[flag] = time_taken
+            timings[code] = time_taken
+        # Return the code with the best (minimum) time
         return min(timings, key=timings.get)
 
     def save_to_csv(self, feature_dict, label):
         header = list(feature_dict.keys()) + ['label']
         row = list(feature_dict.values()) + [label]
+
         file_exists = os.path.exists(self.csv_file)
-        
+        write_header = True
+
+        if file_exists and os.path.getsize(self.csv_file) > 0:
+            write_header = False
+
         with open(self.csv_file, 'a', newline='') as f:
             writer = csv.writer(f)
-            if not file_exists:
+            if write_header:
                 writer.writerow(header)
             writer.writerow(row)
 
     def process_file(self, c_file):
         feats = self.extract_features(c_file)
-        best_flag = self.get_best_optimization_flag(c_file)
-        self.save_to_csv(feats, best_flag)
-        print(f"[✓] Processed {c_file}, best flag: {best_flag}")
+        best_flag_code = self.get_best_optimization_flag(c_file)
+        self.save_to_csv(feats, best_flag_code)
+        print(f"[✓] Processed {c_file}, best flag code: {best_flag_code}")
