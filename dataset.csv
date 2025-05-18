@@ -1,0 +1,11 @@
+filename,num_loops,num_ifs,num_functions,max_function_call_depth,cyclomatic_complexity,int_count,float_count,best_flag
+1 to 10.c,0,0,0,0,0,0,0,0
+1 to n dowhile.c,0,0,0,0,0,0,0,0
+1 to n.c,0,0,0,0,0,0,0,0
+10variable.c,0,0,0,0,0,0,0,0
+2darr2.c,0,0,0,0,0,0,0,0
+2sem_practice10.c,0,0,0,0,0,0,0,0
+2sem_practice6.c,0,0,0,0,0,0,0,0
+2sem_practice7.c,0,0,0,0,0,0,0,0
+2sem_string4.c,0,0,0,0,0,0,0,0
+alphpat3.c,0,0,0,0,0,0,0,0
