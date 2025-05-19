@@ -14,7 +14,7 @@ class DatasetGenerator:
         self.csv_file = csv_file
 
         # Genetic algorithm params
-        self.POPULATION_SIZE = 10
+        self.POPULATION_SIZE = 6
         self.MUTATION_RATE = 0.1
         self.GENERATIONS = 5
 
